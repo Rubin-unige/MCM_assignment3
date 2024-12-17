@@ -19,14 +19,43 @@ classdef cartesianControl < handle
                 error('Not enough input arguments (cartesianControl)')
             end
         end
-        function [x_dot]=getCartesianReference(self,bTg)
+        
+        function [x_dot, e_linear, e_angular] = getCartesianReference(self, bTg)
             %% getCartesianReference function
-            % Inputs :
-            % bTg : goal frame
-            % Outputs :
-            % x_dot : cartesian reference for inverse kinematic control
+            % Inputs:
+            % bTg : Goal frame (4x4 transformation matrix)
+            % Outputs:
+            % x_dot : Cartesian reference velocities (6x1 vector)
             
+            % Get current tool frame w.r.t base frame
+            bTt = self.gm.getToolTransformWrtBase();
+            
+            % Extract positions
+            bOt = bTt(1:3, 4); % Position of tool frame
+            bOg = bTg(1:3, 4); % Position of goal frame
+            
+            % Compute position error
+            e_linear = bOg - bOt;
+            
+            % Extract rotation matrices
+            bRt = bTt(1:3, 1:3); % Rotation of tool frame
+            bRg = bTg(1:3, 1:3); % Rotation of goal frame
+            
+            % Compute orientation error (using skew-symmetric representation)
+            bRerr = bRg' * bRt; % Relative rotation from goal to tool
+            e_angular = 0.5 * [bRerr(3, 2) - bRerr(2, 3);
+                               bRerr(1, 3) - bRerr(3, 1);
+                               bRerr(2, 1) - bRerr(1, 2)];
+            
+            % Apply proportional control to compute reference velocities
+            v_linear = self.k_l * e_linear;  % Linear velocity
+            v_angular = self.k_a * e_angular; % Angular velocity
+            
+            % Combine into 6x1 Cartesian velocity vector
+            x_dot = [v_angular; v_linear];
+            disp(x_dot);
         end
+
     end
 end
 

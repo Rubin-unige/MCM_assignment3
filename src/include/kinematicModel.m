@@ -17,25 +17,28 @@ classdef kinematicModel < handle
                 error('Not enough input arguments (geometricModel)')
             end
         end
+
         function updateJacobian(self)
-        %% Update Jacobian function
-        % The function update:
-        % - J: end-effector jacobian matrix
+            %% Update Jacobian function
+            % The function updates the Jacobian for the tool frame
         
             % Extract end-effector position from the last transformation
             bT7 = self.gm.getTransformWrtBase(self.gm.jointNumber); 
-            bre = bT7(1:3, 4); % position voector of end effector wrt base
+            bre = bT7(1:3, 4); % position vector of end effector wrt base
+        
+            % Get the tool transformation relative to the end-effector
+            eTt = self.gm.eTt; % Tool transformation relative to the end-effector
             
             % Loop through each joint
             for i = 1:self.gm.jointNumber
                 % Get the transformation from base to the current joint
                 bTi = self.gm.getTransformWrtBase(i); % Transformation from base to joint i
-                
+        
                 % Extract joint axis and position vector from the transformation matrix
-                bzi = bTi(1:3, 3); % z-axis of joint i in baser frame
+                bzi = bTi(1:3, 3); % z-axis of joint i in base frame
                 bri = bTi(1:3, 4); % position vector of joint i in the base frame
                 
-                % Compute Jacobian based on joint 
+                % Compute Jacobian based on joint type
                 if self.gm.jointType(i) == 0  % Revolute joint
                     % Linear velocity
                     iJe_v = cross(bzi, (bre - bri)); 
@@ -54,12 +57,21 @@ classdef kinematicModel < handle
                     error("Invalid joint type: must be 0 (revolute) or 1 (prismatic)");
                 end
                 
-                % Assign to Jacobian matrix
-                self.J(1:3, i) = iJe_omega;       % Linear velocity part of the Jacobian
-                self.J(4:6, i) = iJe_v;   % Angular velocity part of the Jacobian
+                % Assign to Jacobian matrix (base frame)
+                self.J(1:3, i) = iJe_omega;       % Angular velocity part of the Jacobian
+                self.J(4:6, i) = iJe_v;           % Linear velocity part of the Jacobian
             end
             
+            % Now, adjust Jacobian for the tool frame
+            % Apply transformation to both the linear and angular parts of the Jacobian using eTt
+            J_tool_linear = eTt(1:3, 1:3) * self.J(1:3, :);  % Transform the linear part
+            J_tool_angular = eTt(1:3, 1:3) * self.J(4:6, :); % Transform the angular part
+            
+            % Update the Jacobian for the tool frame
+            self.J(1:3, :) = J_tool_linear;   % Update the linear part of the Jacobian
+            self.J(4:6, :) = J_tool_angular;  % Update the angular part of the Jacobian
         end
+
     end
 end
 
