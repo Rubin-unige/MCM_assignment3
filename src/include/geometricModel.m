@@ -104,7 +104,7 @@ classdef geometricModel < handle
             % tool
 
             % Get the transformation from the base to the end-effector
-            bTe = self.getTransformWrtBase(self.jointNumber); % Assuming the end-effector is the last joint
+            bTe = self.getTransformWrtBase(self.jointNumber);
         
             % Multiply it by the tool transformation (eTt)
             bTt = bTe * self.eTt;

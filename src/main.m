@@ -41,16 +41,16 @@ disp(bTt);
 
 %% Define the goal frame and initialize cartesian control
 % Goal definition 
-theta = pi/6;
-bOg = [0.15; -0.85; 0.3];
+yaw_g = -3.02; % yaw
+pitch_g = -0.40; % pitch 
+roll_g = -1.33; % roll
+bOg = [-0.14; -0.85; 0.6];
 
 % rotation around y-axis
-bRg_y = [cos(theta), 0, sin(theta);
-        0, 1, 0;
-        -sin(theta), 0, cos(theta)];
+bRg = YPRToRot(yaw_g, pitch_g, roll_g);
 
 % Goal frame transformaion
-bTg = [bRg_y bOg; 0 0 0 1];
+bTg = [bRg bOg; 0 0 0 1];
 
 disp('bTg')
 disp(bTg)
@@ -130,9 +130,8 @@ for i = t
 
     %% INVERSE KINEMATIC
     % Compute desired joint velocities
-    lambda = 0.3;
-    q_dot = pinv(km.J) * lambda * x_dot; 
-    
+    q_dot = pinv(km.J) * x_dot; 
+
     % simulating the robot - implement KinematicSimulation
     q = KinematicSimulation(q, q_dot, dt, qmin, qmax);
 

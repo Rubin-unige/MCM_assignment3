@@ -41,11 +41,12 @@ classdef cartesianControl < handle
             bRt = bTt(1:3, 1:3); % Rotation of tool frame
             bRg = bTg(1:3, 1:3); % Rotation of goal frame
             
-            % Compute orientation error (using skew-symmetric representation)
-            bRerr = bRg' * bRt; % Relative rotation from goal to tool
-            e_angular = 0.5 * [bRerr(3, 2) - bRerr(2, 3);
-                               bRerr(1, 3) - bRerr(3, 1);
-                               bRerr(2, 1) - bRerr(1, 2)];
+            % Compute relative rotation matrix from tool to goal
+            tRg = bRt' * bRg;
+            
+            % Calculate angular error using RotToAngleAxis
+            [h, theta] = RotToAngleAxis(tRg); % Use the provided function
+            e_angular = bRt*h*theta; % Angular error as a 3x1 vector
             
             % Apply proportional control to compute reference velocities
             v_linear = self.k_l * e_linear;  % Linear velocity

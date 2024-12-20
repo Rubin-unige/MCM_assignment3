@@ -24,11 +24,9 @@ classdef kinematicModel < handle
         
             % Extract end-effector position from the last transformation
             bT7 = self.gm.getTransformWrtBase(self.gm.jointNumber); 
+            bRe = bT7(1:3, 1:3);  % Rotation part
             bre = bT7(1:3, 4); % position vector of end effector wrt base
-        
-            % Get the tool transformation relative to the end-effector
-            eTt = self.gm.eTt; % Tool transformation relative to the end-effector
-            
+       
             % Loop through each joint
             for i = 1:self.gm.jointNumber
                 % Get the transformation from base to the current joint
@@ -61,17 +59,28 @@ classdef kinematicModel < handle
                 self.J(1:3, i) = iJe_omega;       % Angular velocity part of the Jacobian
                 self.J(4:6, i) = iJe_v;           % Linear velocity part of the Jacobian
             end
+           
+            % Compute the Tool Jacobian Jt (rigid body Jacobian)
+            % The tool transformation relative to the end-effector
+            ert = self.gm.eTt(1:3, 4);  % Position of the tool relative to the end-effector
+            skew_bRe_ert = skew(bRe * ert);  % Compute the skew-symmetric matrix of (bRe * ert)
             
-            % Now, adjust Jacobian for the tool frame
-            % Apply transformation to both the linear and angular parts of the Jacobian using eTt
-            J_tool_linear = eTt(1:3, 1:3) * self.J(1:3, :);  % Transform the linear part
-            J_tool_angular = eTt(1:3, 1:3) * self.J(4:6, :); % Transform the angular part
+            % Tool Jacobian Jt
+            eJt = [eye(3), zeros(3, 3); -skew_bRe_ert, eye(3)];
             
-            % Update the Jacobian for the tool frame
-            self.J(1:3, :) = J_tool_linear;   % Update the linear part of the Jacobian
-            self.J(4:6, :) = J_tool_angular;  % Update the angular part of the Jacobian
+            % Compute the base-to-tool Jacobian
+            bJt = eJt * self.J; % Final base-to-tool Jacobian
+            self.J = bJt; 
+
         end
 
     end
+end
+
+% Skew-Symmetric Function
+function S = skew(v)
+    S = [  0     -v(3)   v(2);
+         v(3)     0     -v(1);
+        -v(2)    v(1)     0   ];
 end
 
